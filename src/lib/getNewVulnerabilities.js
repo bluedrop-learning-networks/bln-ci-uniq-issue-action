@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { differenceBy, isEqual } = require('lodash');
+const { differenceWith, isEqual } = require('lodash');
 
 const config = require('../utils/config');
 const logger = require('../utils/logger');
@@ -13,10 +13,9 @@ module.exports = ({ existingVulnerabilities }) => {
     process.exit(1);
   }
   const detectedVulnerabilities = JSON.parse(detectedVulnerabilitiesFile);
-
   return {
-    ...existingVulnerabilities,
-    vulnerabilities: differenceBy(
+    ...detectedVulnerabilities,
+    vulnerabilities: differenceWith(
       detectedVulnerabilities.vulnerabilities,
       existingVulnerabilities,
       isEqual,
