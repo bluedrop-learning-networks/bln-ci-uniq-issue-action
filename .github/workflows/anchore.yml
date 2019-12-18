@@ -3,7 +3,7 @@ on:
   schedule:
     - cron:  '0 0 * * MON'
 
-name: Vulnerability scan of built Docker image
+name: Docker image vulnerability scan
 
 jobs:
   anchore:
@@ -20,12 +20,8 @@ jobs:
         IMAGE_NAME: ${{ github.repository }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t $IMAGE_NAME:$IMAGE_TAG .
+        docker build -t $IMAGE_NAME:$IMAGE_TAG -f Dockerfile.test .
         echo "::set-env name=image::$IMAGE_NAME:$IMAGE_TAG"
-
-    - name: Test image name
-      run:
-        echo "image:${{ env.image }}"
 
     - name: Scan Docker image
       uses: anchore/scan-action@master
@@ -45,7 +41,7 @@ jobs:
         echo "\`\`\`" >> ./.github/ISSUE_TEMPLATE.md
 
     - name: Find new vulnerabilities
-      uses: amuslija/ci-utils@master
+      uses: bluedrop-learning-networks/bln-ci-uniq-issue-action@initial-action-code
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
