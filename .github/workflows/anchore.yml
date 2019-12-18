@@ -1,0 +1,63 @@
+on:
+  push:
+  schedule:
+    - cron:  '0 0 * * MON'
+
+name: Vulnerability scan of built Docker image
+
+jobs:
+  anchore:
+    name: Docker image vulnerability scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+
+    - name: Build Docker image
+      id: build-image
+      env:
+        IMAGE_NAME: ${{ github.repository }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $IMAGE_NAME:$IMAGE_TAG .
+        echo "::set-env name=image::$IMAGE_NAME:$IMAGE_TAG"
+
+    - name: Test image name
+      run:
+        echo "image:${{ env.image }}"
+
+    - name: Scan Docker image
+      uses: anchore/scan-action@master
+      id: anchore-scan
+      with:
+        image-reference: "${{ github.repository }}:${{ github.sha }}"
+
+    - name: anchore inline scan JSON results
+      run: |
+        VULNERABILITIES=$(cat ./anchore-reports/vulnerabilities.json | jq '.vulnerabilities | length')
+        echo "::set-env name=vulnerabilities::$VULNERABILITIES"
+
+    - name: Add vulnerability data to the issue template
+      run: |
+        echo "\`\`\`" >> ./.github/ISSUE_TEMPLATE.md
+        cat ./anchore-reports/vulnerabilities.json >> ./.github/ISSUE_TEMPLATE.md
+        echo "\`\`\`" >> ./.github/ISSUE_TEMPLATE.md
+
+    - name: Find new vulnerabilities
+      uses: amuslija/ci-utils@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        command: report-vulnerabilities
+        vulnerabilities-file-path: ./anchore-reports/vulnerabilities.json
+        vulnerabilities-output-path: ./anchore-reports/vulnerabilities_to_report.json
+
+    - name: get vulnerabilities to report
+      run: |
+        cat ./anchore-reports/vulnerabilities_to_report.json
+
+    - name: Create issue if vulnerabilities exist
+      uses: JasonEtco/create-an-issue@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
