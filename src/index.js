@@ -15,13 +15,7 @@ const main = async () => {
     logger.log(`Found ${existingVulnerabilities.length} existing vulnerabilities.`);
 
     const newVulnerabilities = getNewVulnerabilities({ existingVulnerabilities });
-    if (!get(newVulnerabilities, 'vulnerabilities.length')) {
-      logger.log('No new vulnerabilities found for repo.');
-      return process.exit(0);
-    }
-
     logger.log(`${newVulnerabilities.vulnerabilities.length} new vulnerabilities found for repo.`);
-
     fs.writeFileSync(vulnerabilitiesOutputPath, JSON.stringify(newVulnerabilities));
     logger.log(`New vulnerabilities stored in ${vulnerabilitiesOutputPath}`);
     return process.exit(0);
