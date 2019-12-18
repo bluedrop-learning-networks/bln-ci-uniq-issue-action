@@ -1,13 +1,11 @@
 # FROM node:8.10-alpine
 FROM node:8.12-alpine
 
-WORKDIR /app
-
-COPY package.json yarn.lock ./
+COPY package*.json ./
 
 RUN \
-  yarn --prod
+  npm i
 
-COPY . ./
+COPY . .
 
-CMD ["yarn", "start"]
+ENTRYPOINT ["node", "/index.js"]
