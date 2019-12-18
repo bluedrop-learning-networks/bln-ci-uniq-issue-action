@@ -29,6 +29,10 @@ jobs:
       with:
         image-reference: "${{ github.repository }}:${{ github.sha }}"
 
+    - name: Get existing vulnerabilities
+      run: |
+        cat ./anchore-reports/vulnerabilities.json
+
     - name: anchore inline scan JSON results
       run: |
         VULNERABILITIES=$(cat ./anchore-reports/vulnerabilities.json | jq '.vulnerabilities | length')
@@ -49,9 +53,9 @@ jobs:
         vulnerabilities-file-path: ./anchore-reports/vulnerabilities.json
         vulnerabilities-output-path: ./anchore-reports/vulnerabilities_to_report.json
 
-    - name: get vulnerabilities to report
+    - name: Get vulnerabilities to report
       run: |
-        cat ./anchore-reports/vulnerabilities_to_report.json
+        cat ./anchore-reports/vulnerabilities_to_report.json || true
 
     - name: Create issue if vulnerabilities exist
       uses: JasonEtco/create-an-issue@master
