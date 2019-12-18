@@ -33,17 +33,6 @@ jobs:
       run: |
         cat ./anchore-reports/vulnerabilities.json
 
-    - name: anchore inline scan JSON results
-      run: |
-        VULNERABILITIES=$(cat ./anchore-reports/vulnerabilities.json | jq '.vulnerabilities | length')
-        echo "::set-env name=vulnerabilities::$VULNERABILITIES"
-
-    - name: Add vulnerability data to the issue template
-      run: |
-        echo "\`\`\`" >> ./.github/ISSUE_TEMPLATE.md
-        cat ./anchore-reports/vulnerabilities.json >> ./.github/ISSUE_TEMPLATE.md
-        echo "\`\`\`" >> ./.github/ISSUE_TEMPLATE.md
-
     - name: Find new vulnerabilities
       uses: bluedrop-learning-networks/bln-ci-uniq-issue-action@initial-action-code
       env:
@@ -53,11 +42,20 @@ jobs:
         vulnerabilities-file-path: ./anchore-reports/vulnerabilities.json
         vulnerabilities-output-path: ./anchore-reports/vulnerabilities_to_report.json
 
-    - name: Get vulnerabilities to report
+    - name: anchore inline scan JSON results
       run: |
-        cat ./anchore-reports/vulnerabilities_to_report.json || true
+        VULNERABILITIES=$(cat ./anchore-reports/vulnerabilities.json | jq '.vulnerabilities | length')
+        echo "::set-env name=vulnerabilities::$VULNERABILITIES"
+
+    - name: Add vulnerability data to the issue template
+      if: env.vulnerabilities > 0
+      run: |
+        echo "\`\`\`" >> ./.github/ISSUE_TEMPLATE.md
+        cat ./anchore-reports/vulnerabilities.json >> ./.github/ISSUE_TEMPLATE.md
+        echo "\`\`\`" >> ./.github/ISSUE_TEMPLATE.md
 
     - name: Create issue if vulnerabilities exist
       uses: JasonEtco/create-an-issue@master
+      if: env.vulnerabilities > 0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
