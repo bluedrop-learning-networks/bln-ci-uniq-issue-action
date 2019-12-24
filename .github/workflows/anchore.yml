@@ -1,0 +1,61 @@
+on:
+  push:
+  schedule:
+    - cron:  '0 0 * * MON'
+
+name: Docker image vulnerability scan
+
+jobs:
+  anchore:
+    name: Docker image vulnerability scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+
+    - name: Build Docker image
+      id: build-image
+      env:
+        IMAGE_NAME: ${{ github.repository }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $IMAGE_NAME:$IMAGE_TAG -f Dockerfile.test .
+        echo "::set-env name=image::$IMAGE_NAME:$IMAGE_TAG"
+
+    - name: Scan Docker image
+      uses: anchore/scan-action@master
+      id: anchore-scan
+      with:
+        image-reference: "${{ github.repository }}:${{ github.sha }}"
+
+    - name: Get existing vulnerabilities
+      run: |
+        cat ./anchore-reports/vulnerabilities.json
+
+    - name: Find new vulnerabilities
+      uses: bluedrop-learning-networks/bln-ci-uniq-issue-action@initial-action-code
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        command: report-vulnerabilities
+        vulnerabilities-file-path: ./anchore-reports/vulnerabilities.json
+        vulnerabilities-output-path: ./anchore-reports/vulnerabilities_to_report.json
+
+    - name: anchore inline scan JSON results
+      run: |
+        VULNERABILITIES=$(cat ./anchore-reports/vulnerabilities_to_report.json | jq '.vulnerabilities | length')
+        echo "::set-env name=vulnerabilities::$VULNERABILITIES"
+
+    - name: Add vulnerability data to the issue template
+      if: env.vulnerabilities > 0
+      run: |
+        echo "\`\`\`" >> ./.github/ISSUE_TEMPLATE.md
+        cat ./anchore-reports/vulnerabilities_to_report.json >> ./.github/ISSUE_TEMPLATE.md
+        echo "\`\`\`" >> ./.github/ISSUE_TEMPLATE.md
+
+    - name: Create issue if vulnerabilities exist
+      uses: JasonEtco/create-an-issue@master
+      if: env.vulnerabilities > 0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
